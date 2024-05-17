@@ -19,6 +19,7 @@ import java.awt.Color;
  */
 
 public class OCoisa extends AdvancedRobot {
+    private Teste teste = new Teste("Funcionou");
     public static int BINS = 47;
     public static double _surfStats[] = new double[BINS]; // we'll use 47 bins
     public Point2D.Double _myLocation;     // our bot's location
@@ -47,7 +48,9 @@ public class OCoisa extends AdvancedRobot {
     public void run() {
         _fieldRect = new java.awt.geom.Rectangle2D.Double(18, 18, getBattleFieldWidth() - 36, getBattleFieldHeight() - 36);
 
-		setColors(Color.BLUE, Color.BLACK, Color.YELLOW);
+        //setColor
+        setColors(Color.orange, Color.white, Color.orange, Color.black, Color.orange);
+
 		lateralDirection = 1;
 		lastEnemyVelocity = 0;
 		
@@ -61,6 +64,7 @@ public class OCoisa extends AdvancedRobot {
         do {
             // basic mini-radar code
             turnRadarRightRadians(Double.POSITIVE_INFINITY);
+            System.out.println(teste.getTeste());
         } while (true);
     }
 
@@ -72,9 +76,8 @@ public class OCoisa extends AdvancedRobot {
 
         setTurnRadarRightRadians(Utils.normalRelativeAngle(absBearing - getRadarHeadingRadians()) * 2);
 
-        _surfDirections.add(0,
-            new Integer((lateralVelocity >= 0) ? 1 : -1));
-        _surfAbsBearings.add(0, new Double(absBearing + Math.PI));
+        _surfDirections.add(0, (lateralVelocity >= 0) ? 1 : -1);
+        _surfAbsBearings.add(0, absBearing + Math.PI);
 
 
         double bulletPower = _oppEnergy - e.getEnergy();
@@ -285,16 +288,6 @@ public class OCoisa extends AdvancedRobot {
         setBackAsFront(this, goAngle);
     }
 
-    // This can be defined as an inner class if you want.
-    class EnemyWave {
-        Point2D.Double fireLocation;
-        long fireTime;
-        double bulletVelocity, directAngle, distanceTraveled;
-        int direction;
-
-        public EnemyWave() { }
-    }
-
     // CREDIT: Iterative WallSmoothing by Kawigi
     //   - return absolute angle to move at after account for WallSmoothing
     // robowiki.net?WallSmoothing
@@ -351,97 +344,3 @@ public class OCoisa extends AdvancedRobot {
         }
     }
 }
-
-class GFTWave extends Condition {
-	static Point2D targetLocation;
-
-	double bulletPower;
-	Point2D gunLocation;
-	double bearing;
-	double lateralDirection;
-
-	private static final double MAX_DISTANCE = 900;
-	private static final int DISTANCE_INDEXES = 5;
-	private static final int VELOCITY_INDEXES = 5;
-	private static final int BINS = 25;
-	private static final int MIDDLE_BIN = (BINS - 1) / 2;
-	private static final double MAX_ESCAPE_ANGLE = 0.7;
-	private static final double BIN_WIDTH = MAX_ESCAPE_ANGLE / (double)MIDDLE_BIN;
-	
-	private static int[][][][] statBuffers = new int[DISTANCE_INDEXES][VELOCITY_INDEXES][VELOCITY_INDEXES][BINS];
-
-	private int[] buffer;
-	private AdvancedRobot robot;
-	private double distanceTraveled;
-	
-	GFTWave(AdvancedRobot _robot) {
-		this.robot = _robot;
-	}
-	
-	public boolean test() {
-		advance();
-		if (hasArrived()) {
-			buffer[currentBin()]++;
-			robot.removeCustomEvent(this);
-		}
-		return false;
-	}
-
-	double mostVisitedBearingOffset() {
-		return (lateralDirection * BIN_WIDTH) * (mostVisitedBin() - MIDDLE_BIN);
-	}
-	
-	void setSegmentations(double distance, double velocity, double lastVelocity) {
-		int distanceIndex = Math.min(DISTANCE_INDEXES-1, (int)(distance / (MAX_DISTANCE / DISTANCE_INDEXES)));
-		int velocityIndex = (int)Math.abs(velocity / 2);
-		int lastVelocityIndex = (int)Math.abs(lastVelocity / 2);
-		buffer = statBuffers[distanceIndex][velocityIndex][lastVelocityIndex];
-	}
-
-	private void advance() {
-		distanceTraveled += GFTUtils.bulletVelocity(bulletPower);
-	}
-
-	private boolean hasArrived() {
-		return distanceTraveled > gunLocation.distance(targetLocation) - 18;
-	}
-	
-	private int currentBin() {
-		int bin = (int)Math.round(((Utils.normalRelativeAngle(GFTUtils.absoluteBearing(gunLocation, targetLocation) - bearing)) /
-				(lateralDirection * BIN_WIDTH)) + MIDDLE_BIN);
-		return GFTUtils.minMax(bin, 0, BINS - 1);
-	}
-	
-	private int mostVisitedBin() {
-		int mostVisited = MIDDLE_BIN;
-		for (int i = 0; i < BINS; i++) {
-			if (buffer[i] > buffer[mostVisited]) {
-				mostVisited = i;
-			}
-		}
-		return mostVisited;
-	}	
-}
-
-class GFTUtils {
-	static double bulletVelocity(double power) {
-		return 20 - 3 * power;
-	}
-	
-	static Point2D project(Point2D sourceLocation, double angle, double length) {
-		return new Point2D.Double(sourceLocation.getX() + Math.sin(angle) * length,
-				sourceLocation.getY() + Math.cos(angle) * length);
-	}
-	
-	static double absoluteBearing(Point2D source, Point2D target) {
-		return Math.atan2(target.getX() - source.getX(), target.getY() - source.getY());
-	}
-
-	static int sign(double v) {
-		return v < 0 ? -1 : 1;
-	}
-	
-	static int minMax(int v, int min, int max) {
-		return Math.max(min, Math.min(max, v));
-	}
-}							
