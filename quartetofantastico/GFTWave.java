@@ -53,7 +53,7 @@ public class GFTWave extends Condition {
     }
 
     private void advance() {
-        distanceTraveled += GFTUtils.bulletVelocity(bulletPower);
+        distanceTraveled += UtilitariosGFT.velocidadeDoProjetil(bulletPower);
     }
 
     private boolean hasArrived() {
@@ -61,9 +61,9 @@ public class GFTWave extends Condition {
     }
 
     private int currentBin() {
-        int bin = (int)Math.round(((Utils.normalRelativeAngle(GFTUtils.absoluteBearing(gunLocation, targetLocation) - bearing)) /
+        int bin = (int)Math.round(((Utils.normalRelativeAngle(UtilitariosGFT.anguloAbsoluto(gunLocation, targetLocation) - bearing)) /
                 (lateralDirection * BIN_WIDTH)) + MIDDLE_BIN);
-        return GFTUtils.minMax(bin, 0, BINS - 1);
+        return UtilitariosGFT.minMax(bin, 0, BINS - 1);
     }
 
     private int mostVisitedBin() {

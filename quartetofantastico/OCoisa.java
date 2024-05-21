@@ -86,11 +86,11 @@ public class OCoisa extends AdvancedRobot {
 		double enemyDistance = e.getDistance();
 		double enemyVelocity = e.getVelocity();
 		if (enemyVelocity != 0) {
-			lateralDirection = GFTUtils.sign(enemyVelocity * Math.sin(e.getHeadingRadians() - enemyAbsoluteBearing));
+			lateralDirection = UtilitariosGFT.sinal(enemyVelocity * Math.sin(e.getHeadingRadians() - enemyAbsoluteBearing));
 		}
 		GFTWave wave = new GFTWave(this);
 		wave.gunLocation = new Point2D.Double(getX(), getY());
-		GFTWave.targetLocation = GFTUtils.project(wave.gunLocation, enemyAbsoluteBearing, enemyDistance);
+		GFTWave.targetLocation = UtilitariosGFT.projetarMov(wave.gunLocation, enemyAbsoluteBearing, enemyDistance);
 		wave.lateralDirection = lateralDirection;
 		wave.bulletPower = BULLET_POWER;
 		wave.setSegmentations(enemyDistance, enemyVelocity, lastEnemyVelocity);
