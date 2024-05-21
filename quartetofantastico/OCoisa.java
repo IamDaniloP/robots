@@ -118,6 +118,7 @@ public class OCoisa extends AdvancedRobot {
 
         if (RegressaoLogisticaBinaria.getCoeficiente(minhaDistancia, minhaVelocidade) >= 0.5) {
             System.out.println("Distância: " + minhaDistancia);
+            System.out.println("Velocidade: " + minhaVelocidade);
             System.out.println(RegressaoLogisticaBinaria.getCoeficiente(minhaDistancia, minhaVelocidade));
             System.out.println("Perdeu");
 

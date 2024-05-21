@@ -24,15 +24,14 @@ distacia, velocidade e variável dependente (Y)
                 {1205, 0, 1}
 
                 Acima está o conjunto de dados utilizado para realizar o treinamento. Para isso, foi utilizado a ferramenta weka.
-                Para que evitasse que o robô não funcionasse, decidi utilizar aqui apenas os coeficientes retirados do treinamento utilizando tal ferramenta.
-                O weka realizou cerca uma quantidade de interações decidida pela ferramenta para treinar o conjunto. Assim, foi possível perceber
+                Para que evitasse que o robô não funcionasse por ser uma biblioteca externa, decidi utilizar aqui apenas os coeficientes retirados do treinamento utilizando tal ferramenta.
 */
 
 public class RegressaoLogisticaBinaria {
     private static double funcaoLinear(double distancia, double velocidade) {
-        double beta1 = 0.05;    // Coeficiente para distancia
-        double beta2 = -0.01;    // Coeficiente para velocidade
-        double beta0 = -beta1 * 1200;  // Foi necessário pois estava classificando muito abaixo do esperado, devido ao conjunto de dados pequeno para que não afetasse o tempo de execução
+        double beta1 = 0.648;    // Coeficiente para distancia 12.96
+        double beta2 = -0.1269;    // Coeficiente para velocidade
+        double beta0 = -777.6;  // Foi necessário pois estava classificando muito abaixo do esperado, devido ao conjunto de dados pequeno para que não afetasse o tempo de execução
 
         return (beta0 + beta1 * distancia + beta2 * velocidade);
     }
