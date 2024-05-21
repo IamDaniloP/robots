@@ -25,13 +25,13 @@ public class OCoisa extends AdvancedRobot {
 
     public static double _oppEnergy = 100.0;
 
-    public static Rectangle2D.Double _fieldRect;
+    public static Rectangle2D.Double battlefield;
 
     public void run() {
         //setColor
         setColors(Color.orange, Color.white, Color.orange, Color.black, Color.orange);
 
-        _fieldRect = new java.awt.geom.Rectangle2D.Double(18, 18, getBattleFieldWidth() - 36, getBattleFieldHeight() - 36);
+        battlefield = new java.awt.geom.Rectangle2D.Double(18, 18, getBattleFieldWidth() - 36, getBattleFieldHeight() - 36);
 
         lateralDirection = 1;
 		lastEnemyVelocity = 0;
@@ -64,15 +64,15 @@ public class OCoisa extends AdvancedRobot {
         double bulletPower = _oppEnergy - e.getEnergy();
         if (bulletPower < 3.01 && bulletPower > 0.09
             && _surfDirections.size() > 2) {
-            EnemyWave ew = new EnemyWave();
-            ew.fireTime = getTime() - 1;
-            ew.bulletVelocity = bulletVelocity(bulletPower);
-            ew.distanceTraveled = bulletVelocity(bulletPower);
-            ew.direction = ((Integer)_surfDirections.get(2));
-            ew.directAngle = ((Double)_surfAbsBearings.get(2));
-            ew.fireLocation = (Point2D.Double)_enemyLocation.clone(); // last tick
+            OndaDoOponente ondaDoOponente = new OndaDoOponente();
+            ondaDoOponente.tempoDisparo = getTime() - 1;
+            ondaDoOponente.velocidadeProjetil = bulletVelocity(bulletPower);
+            ondaDoOponente.distanciaPercorrida = bulletVelocity(bulletPower);
+            ondaDoOponente.direcao = ((Integer)_surfDirections.get(2));
+            ondaDoOponente.anguloDireto = ((Double)_surfAbsBearings.get(2));
+            ondaDoOponente.localDisparo = (Point2D.Double)_enemyLocation.clone(); // last tick
 
-            _enemyWaves.add(ew);
+            _enemyWaves.add(ondaDoOponente);
         }
 
         _oppEnergy = e.getEnergy();
@@ -121,28 +121,28 @@ public class OCoisa extends AdvancedRobot {
 
     public void updateWaves() {
         for (int x = 0; x < _enemyWaves.size(); x++) {
-            EnemyWave ew = (EnemyWave)_enemyWaves.get(x);
+            OndaDoOponente ondaDoOponente = (OndaDoOponente)_enemyWaves.get(x);
 
-            ew.distanceTraveled = (getTime() - ew.fireTime) * ew.bulletVelocity;
-            if (ew.distanceTraveled >
-                _myLocation.distance(ew.fireLocation) + 50) {
+            ondaDoOponente.distanciaPercorrida = (getTime() - ondaDoOponente.tempoDisparo) * ondaDoOponente.velocidadeProjetil;
+            if (ondaDoOponente.distanciaPercorrida >
+                _myLocation.distance(ondaDoOponente.localDisparo) + 50) {
                 _enemyWaves.remove(x);
                 x--;
             }
         }
     }
 
-    public EnemyWave getClosestSurfableWave() {
+    public OndaDoOponente getClosestSurfableWave() {
         double closestDistance = 10000;
-        EnemyWave surfWave = null;
+        OndaDoOponente surfWave = null;
 
         for (Object enemyWave : _enemyWaves) {
-            EnemyWave ew = (EnemyWave) enemyWave;
-            double distance = _myLocation.distance(ew.fireLocation)
-                    - ew.distanceTraveled;
+            OndaDoOponente ondaDoOponente = (OndaDoOponente) enemyWave;
+            double distance = _myLocation.distance(ondaDoOponente.localDisparo)
+                    - ondaDoOponente.distanciaPercorrida;
 
-            if (distance > ew.bulletVelocity && distance < closestDistance) {
-                surfWave = ew;
+            if (distance > ondaDoOponente.velocidadeProjetil && distance < closestDistance) {
+                surfWave = ondaDoOponente;
                 closestDistance = distance;
             }
         }
@@ -150,19 +150,19 @@ public class OCoisa extends AdvancedRobot {
         return surfWave;
     }
 
-    public static int getFactorIndex(EnemyWave ew, Point2D.Double targetLocation) {
-        double offsetAngle = (absoluteBearing(ew.fireLocation, targetLocation)
-            - ew.directAngle);
+    public static int getFactorIndex(OndaDoOponente ondaDoOponente, Point2D.Double targetLocation) {
+        double offsetAngle = (absoluteBearing(ondaDoOponente.localDisparo, targetLocation)
+            - ondaDoOponente.anguloDireto);
         double factor = Utils.normalRelativeAngle(offsetAngle)
-            / maxEscapeAngle(ew.bulletVelocity) * ew.direction;
+            / maxEscapeAngle(ondaDoOponente.velocidadeProjetil) * ondaDoOponente.direcao;
 
         return (int)limit(0,
             (factor * ((double) (BINS - 1) / 2)) + ((double) (BINS - 1) / 2),
             BINS - 1);
     }
 
-    public void logHit(EnemyWave ew, Point2D.Double targetLocation) {
-        int index = getFactorIndex(ew, targetLocation);
+    public void logHit(OndaDoOponente ondaDoOponente, Point2D.Double targetLocation) {
+        int index = getFactorIndex(ondaDoOponente, targetLocation);
 
         for (int x = 0; x < BINS; x++) {
             _surfStats[x] += 1.0 / (Math.pow(index - x, 2) + 1);
@@ -173,16 +173,16 @@ public class OCoisa extends AdvancedRobot {
         if (!_enemyWaves.isEmpty()) {
             Point2D.Double hitBulletLocation = new Point2D.Double(
                 e.getBullet().getX(), e.getBullet().getY());
-            EnemyWave hitWave = null;
+            OndaDoOponente hitWave = null;
 
             for (Object enemyWave : _enemyWaves) {
-                EnemyWave ew = (EnemyWave) enemyWave;
+                OndaDoOponente ondaDoOponente = (OndaDoOponente) enemyWave;
 
-                if (Math.abs(ew.distanceTraveled -
-                        _myLocation.distance(ew.fireLocation)) < 50
+                if (Math.abs(ondaDoOponente.distanciaPercorrida -
+                        _myLocation.distance(ondaDoOponente.localDisparo)) < 50
                         && Math.abs(bulletVelocity(e.getBullet().getPower())
-                        - ew.bulletVelocity) < 0.001) {
-                    hitWave = ew;
+                        - ondaDoOponente.velocidadeProjetil) < 0.001) {
+                    hitWave = ondaDoOponente;
                     break;
                 }
             }
@@ -195,7 +195,7 @@ public class OCoisa extends AdvancedRobot {
         }
     }
 
-    public Point2D.Double predictPosition(EnemyWave surfWave, int direction) {
+    public Point2D.Double predictPosition(OndaDoOponente surfWave, int direction) {
     	Point2D.Double predictedPosition = (Point2D.Double)_myLocation.clone();
     	double predictedVelocity = getVelocity();
     	double predictedHeading = getHeadingRadians();
@@ -206,7 +206,7 @@ public class OCoisa extends AdvancedRobot {
 
     	do {
     		moveAngle =
-                wallSmoothing(predictedPosition, absoluteBearing(surfWave.fireLocation,
+                wallSmoothing(predictedPosition, absoluteBearing(surfWave.localDisparo,
                 predictedPosition) + (direction * (Math.PI/2)), direction)
                 - predictedHeading;
     		moveDir = 1;
@@ -229,9 +229,9 @@ public class OCoisa extends AdvancedRobot {
 
             counter++;
 
-            if (predictedPosition.distance(surfWave.fireLocation) <
-                surfWave.distanceTraveled + (counter * surfWave.bulletVelocity)
-                + surfWave.bulletVelocity) {
+            if (predictedPosition.distance(surfWave.localDisparo) <
+                surfWave.distanciaPercorrida + (counter * surfWave.velocidadeProjetil)
+                + surfWave.velocidadeProjetil) {
                 intercepted = true;
             }
     	} while(!intercepted && counter < 500);
@@ -239,7 +239,7 @@ public class OCoisa extends AdvancedRobot {
     	return predictedPosition;
     }
 
-    public double checkDanger(EnemyWave surfWave, int direction) {
+    public double checkDanger(OndaDoOponente surfWave, int direction) {
         int index = getFactorIndex(surfWave,
             predictPosition(surfWave, direction));
 
@@ -247,14 +247,14 @@ public class OCoisa extends AdvancedRobot {
     }
 
     public void doSurfing() {
-        EnemyWave surfWave = getClosestSurfableWave();
+        OndaDoOponente surfWave = getClosestSurfableWave();
 
         if (surfWave == null) { return; }
 
         double dangerLeft = checkDanger(surfWave, -1);
         double dangerRight = checkDanger(surfWave, 1);
 
-        double goAngle = absoluteBearing(surfWave.fireLocation, _myLocation);
+        double goAngle = absoluteBearing(surfWave.localDisparo, _myLocation);
         if (dangerLeft < dangerRight) {
             goAngle = wallSmoothing(_myLocation, goAngle - (Math.PI/2), -1);
         } else {
@@ -265,7 +265,7 @@ public class OCoisa extends AdvancedRobot {
     }
 
     public double wallSmoothing(Point2D.Double botLocation, double angle, int orientation) {
-        while (!_fieldRect.contains(project(botLocation, angle, 160))) {
+        while (!battlefield.contains(project(botLocation, angle, 160))) {
             angle += orientation*0.05;
         }
         return angle;
