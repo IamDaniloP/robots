@@ -88,18 +88,18 @@ public class OCoisa extends AdvancedRobot {
 		if (enemyVelocity != 0) {
 			lateralDirection = UtilitariosGFT.sinal(enemyVelocity * Math.sin(e.getHeadingRadians() - enemyAbsoluteBearing));
 		}
-		GFTWave wave = new GFTWave(this);
-		wave.gunLocation = new Point2D.Double(getX(), getY());
-		GFTWave.targetLocation = UtilitariosGFT.projetarMov(wave.gunLocation, enemyAbsoluteBearing, enemyDistance);
-		wave.lateralDirection = lateralDirection;
-		wave.bulletPower = BULLET_POWER;
-		wave.setSegmentations(enemyDistance, enemyVelocity, lastEnemyVelocity);
+		OndaGFT ondaGFT = new OndaGFT(this);
+        ondaGFT.localArma = new Point2D.Double(getX(), getY());
+		OndaGFT.localAlvo = UtilitariosGFT.projetarMov(ondaGFT.localArma, enemyAbsoluteBearing, enemyDistance);
+        ondaGFT.direcaoLateral = lateralDirection;
+        ondaGFT.potenciaProjetil = BULLET_POWER;
+        ondaGFT.setSubdivisoes(enemyDistance, enemyVelocity, lastEnemyVelocity);
 		lastEnemyVelocity = enemyVelocity;
-		wave.bearing = enemyAbsoluteBearing;
-		setTurnGunRightRadians(Utils.normalRelativeAngle(enemyAbsoluteBearing - getGunHeadingRadians() + wave.mostVisitedBearingOffset()));
-		setFire(wave.bulletPower);
+        ondaGFT.angulo = enemyAbsoluteBearing;
+		setTurnGunRightRadians(Utils.normalRelativeAngle(enemyAbsoluteBearing - getGunHeadingRadians() + ondaGFT.deslocamentoDoAnguloMaisVisitado()));
+		setFire(ondaGFT.potenciaProjetil);
 		if (getEnergy() >= BULLET_POWER) {
-			addCustomEvent(wave);
+			addCustomEvent(ondaGFT);
 		}
 		setTurnRadarRightRadians(Utils.normalRelativeAngle(enemyAbsoluteBearing - getRadarHeadingRadians()) * 2);
 
