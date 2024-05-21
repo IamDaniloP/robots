@@ -27,7 +27,6 @@ public class OCoisa extends AdvancedRobot {
     public static Rectangle2D.Double dimensoesArena;
 
     public void run() {
-        //setColor
         setColors(Color.orange, Color.white, Color.orange, Color.black, Color.orange);
 
         dimensoesArena = new java.awt.geom.Rectangle2D.Double(18, 18, getBattleFieldWidth() - 36, getBattleFieldHeight() - 36);
@@ -49,7 +48,7 @@ public class OCoisa extends AdvancedRobot {
     public void onScannedRobot(ScannedRobotEvent e) {
         minhaLocalizacao = new Point2D.Double(getX(), getY());
 
-        // Calcular a velocidade lateral do oponente
+        // calcula a velocidade lateral do oponente
         double velocidadeLateral = getVelocity()*Math.sin(e.getBearingRadians());
         double anguloAbsoluto = e.getBearingRadians() + getHeadingRadians();
 
@@ -61,7 +60,7 @@ public class OCoisa extends AdvancedRobot {
         // calcula potência do projétil inimigo para saber a velocidade para desviar
         double potenciaProjetil = energiaOponente - e.getEnergy();
         if (potenciaProjetil < 3.01 && potenciaProjetil > 0.09 && direcaoSurf.size() > 2) {
-            // Cria uma onda do oponente para armazenar
+            // cria uma onda do oponente para armazenar
             OndaDoOponente ondaDoOponente = new OndaDoOponente();
             ondaDoOponente.tempoDisparo = getTime() - 1;
             ondaDoOponente.velocidadeProjetil = velocidadeProjetil(potenciaProjetil);
@@ -73,6 +72,7 @@ public class OCoisa extends AdvancedRobot {
             // adiciona ao array cada onda do oponente
             ondasDoOponente.add(ondaDoOponente);
         }
+
         // atualiza a energia do oponente após o disparo
         energiaOponente = e.getEnergy();
 
@@ -89,7 +89,7 @@ public class OCoisa extends AdvancedRobot {
             direcaoLateral = UtilitariosGFT.sinal(velocidadeOponente * Math.sin(e.getHeadingRadians() - anguloAbsolutoOponente));
 		}
 
-        // Cria uma onda para calcular a segmentação e realizar o disparo
+        // cria uma onda para calcular a segmentação e realizar o disparo
 		OndaGFT ondaGFT = new OndaGFT(this);
         ondaGFT.localArma = new Point2D.Double(getX(), getY());
 		OndaGFT.localAlvo = UtilitariosGFT.projetarMov(ondaGFT.localArma, anguloAbsolutoOponente, distanciaOponente);
@@ -99,36 +99,52 @@ public class OCoisa extends AdvancedRobot {
         ultimaVelocidadeInimigo = velocidadeOponente;
         ondaGFT.angulo = anguloAbsolutoOponente;
 
-        // Depois de realizar a estimativa, ele configura a direção do canhão e realiza o disparo
+        // depois de realizar a estimativa, ele configura a direção do canhão e realiza o disparo
         setTurnGunRightRadians(Utils.normalRelativeAngle(anguloAbsolutoOponente - getGunHeadingRadians() + ondaGFT.deslocamentoDoAnguloMaisVisitado()));
 		setFire(ondaGFT.potenciaProjetil);
 
-        // Adicionar a onda GFT ao sistema de eventos customizados
+        // adicionar a onda GFT ao sistema de eventos customizados
         if (getEnergy() >= POTENCIA_PROJETIL) {
 			addCustomEvent(ondaGFT);
 		}
 
-        // Ajustar a direção do radar novamente
+        // ajustar a direção do radar novamente
 		setTurnRadarRightRadians(Utils.normalRelativeAngle(anguloAbsolutoOponente - getRadarHeadingRadians()) * 2);
 
-        // ********************** verificar se vai realizar mais alguma mudança
-        //Realizando a implementação da regressão logística bináriaa
+        /*
+         * A ideia para a implementação da regressão logística é evitar perder o alcance para o robô adversário.
+         * Seguindo as estratégias adotadas que foram: WaveSurfer e Guess Factor Target, o robô só conseguiria
+         * desempenhar seu papel em arenas de até no máximo 800x600. Porém, devido à necessidade de uma arena de até 1200x1200,
+         * resolvi adotar essas mesmas estratégias e adaptá-las ao meu robô.
+         *
+         * O método de classificação escolhido para implementar essa funcionalidade no robô foi a regressão logística binária.
+         * Para isso, utilizamos dois parâmetros: distância para o robô adversário e a velocidade do meu robô.
+         * A cada vez que o robô adversário for escaneado, ele fará essa verificação no if abaixo.
+         *
+         * Caso o coeficiente seja menor que 0,5, o resultado será "0", indicando que o robô adversário não saiu
+         * da área do scanner do meu robô. Se o coeficiente for igual ou maior que 0,5, o resultado será "1", indicando que
+         * o robô adversário saiu da área do scanner. Quando o coeficiente é "1" (ou seja, maior ou igual a 0,5), ele apontará o chassi
+         * do tanque para a última posição em que o canhão estava, aumentando a probabilidade de encontrar o robô inimigo,
+         * considerando que sua velocidade máxima é de 8.0 pixels/segundo.
+         *
+         * Não configurei o método getCoeficiente para retornar apenas 0 e 1, pois queria tornar os coeficientes visíveis.
+         * Optei por fazer a verificação diretamente dentro do if.
+         */
         double minhaDistancia = e.getDistance();
         double minhaVelocidade = getVelocity();
-
         if (RegressaoLogisticaBinaria.getCoeficiente(minhaDistancia, minhaVelocidade) >= 0.5) {
             System.out.println("Distância: " + minhaDistancia);
             System.out.println("Velocidade: " + minhaVelocidade);
-            System.out.println(RegressaoLogisticaBinaria.getCoeficiente(minhaDistancia, minhaVelocidade));
+            System.out.println("Coeficiente da Regressão Logística: " + RegressaoLogisticaBinaria.getCoeficiente(minhaDistancia, minhaVelocidade));
             System.out.println("Perdeu");
 
             double direcaoCanhao = Utils.normalRelativeAngle(getGunHeadingRadians() - getHeadingRadians());
             setTurnRightRadians(direcaoCanhao);
-            setAhead(500); // Não tem problema o valor alto, pois assim que o oponente for encontrado ele não entra no if
+            setAhead(500); // não tem problema o valor alto, pois assim que o oponente for encontrado ele não entra no if
         }
     }
 
-    // Atualiza a distância percorrida pelas ondas do oponente e remove as que passaram
+    // atualiza a distância percorrida pelas ondas do oponente e remove as que passaram
     public void atualizarOnda() {
         for (int x = 0; x < ondasDoOponente.size(); x++) {
             OndaDoOponente ondaDoOponente = (OndaDoOponente)ondasDoOponente.get(x);
@@ -141,7 +157,7 @@ public class OCoisa extends AdvancedRobot {
         }
     }
 
-    // Obtém a onda do oponente mais próxima
+    // obtém a onda do oponente mais próxima
     public OndaDoOponente getOndaProxima() {
         double distanciaMaisProxima = 10000;
         OndaDoOponente ondaProxima = null;
@@ -159,7 +175,7 @@ public class OCoisa extends AdvancedRobot {
         return ondaProxima;
     }
 
-    // Calcula o índice do fator baseado no ângulo de desvio e no máximo ângulo de escape
+    // calcula o índice do fator baseado no ângulo de desvio e no máximo ângulo de escape
     public static int getIndiceFator(OndaDoOponente ondaDoOponente, Point2D.Double localizacaoOponente) {
         double anguloDesvio = (anguloAbsoluto(ondaDoOponente.localDisparo, localizacaoOponente) - ondaDoOponente.anguloDireto);
         double fator = Utils.normalRelativeAngle(anguloDesvio) / maximoAnguloEscape(ondaDoOponente.velocidadeProjetil) * ondaDoOponente.direcao;
@@ -167,7 +183,7 @@ public class OCoisa extends AdvancedRobot {
         return (int)limite(0, (fator * ((double) (BINS - 1) / 2)) + ((double) (BINS - 1) / 2), BINS - 1);
     }
 
-    // Registra um acerto no array de status de surf
+    // registra um acerto no array de status de surf
     public void registraAcerto(OndaDoOponente ondaDoOponente, Point2D.Double localizacaoOponente) {
         int index = getIndiceFator(ondaDoOponente, localizacaoOponente);
 
@@ -176,7 +192,7 @@ public class OCoisa extends AdvancedRobot {
         }
     }
 
-    // Registra quando o robô é atingido por um projétil
+    // registra quando o robô é atingido por um projétil
     public void onHitByBullet(HitByBulletEvent e) {
         if (!ondasDoOponente.isEmpty()) {
             Point2D.Double localizacaoMomentoAtingido = new Point2D.Double(e.getBullet().getX(), e.getBullet().getY());
@@ -198,7 +214,7 @@ public class OCoisa extends AdvancedRobot {
         }
     }
 
-    // Calcula a posição prevista do robô para evitar tiros
+    // calcula a posição prevista do robô para evitar tiros
     public Point2D.Double posicaoPrevista(OndaDoOponente ondaDoOponente, int direcao) {
     	Point2D.Double posicaoPrevista = (Point2D.Double)minhaLocalizacao.clone();
     	double velocidadePrevista = getVelocity();
@@ -239,7 +255,7 @@ public class OCoisa extends AdvancedRobot {
     	return posicaoPrevista;
     }
 
-    // Calcula o perigo baseado no índice do fator
+    // calcula o perigo baseado no índice do fator
     public double checarPerigo(OndaDoOponente ondaDoOponente, int direcao) {
         int index = getIndiceFator(ondaDoOponente,
                 posicaoPrevista(ondaDoOponente, direcao));
@@ -247,7 +263,7 @@ public class OCoisa extends AdvancedRobot {
         return statusSurf[index];
     }
 
-    // Realiza o movimento de surf para evitar tiros
+    // realiza o movimento de surf para evitar tiros
     public void realizarSurfing() {
         OndaDoOponente ondaDoOponente = getOndaProxima();
 
@@ -266,7 +282,7 @@ public class OCoisa extends AdvancedRobot {
         tornarTrazeiraParaDianteira(this, anguloDesvio);
     }
 
-    // Evita que o robô colida com as paredes
+    // evita que o robô colida com as paredes
     public double evitaParede(Point2D.Double localizacaoRobo, double angulo, int orientacao) {
         while (!dimensoesArena.contains(projetarMov(localizacaoRobo, angulo, 160))) {
             angulo += orientacao*0.05;
@@ -274,33 +290,33 @@ public class OCoisa extends AdvancedRobot {
         return angulo;
     }
 
-    // Projeta o movimento baseado no ângulo e comprimento
+    // projeta o movimento baseado no ângulo e comprimento
     public static Point2D.Double projetarMov(Point2D.Double localOrigem, double angulo, double comprimento) {
         return new Point2D.Double(localOrigem.x + Math.sin(angulo) * comprimento,
                 localOrigem.y + Math.cos(angulo) * comprimento);
     }
 
-    // Calcula o ângulo absoluto entre dois pontos
+    // calcula o ângulo absoluto entre dois pontos
     public static double anguloAbsoluto(Point2D.Double source, Point2D.Double target) {
         return Math.atan2(target.x - source.x, target.y - source.y);
     }
 
-    // Limita um valor a um intervalo específico
+    // limita um valor a um intervalo específico
     public static double limite(double min, double valor, double max) {
         return Math.max(min, Math.min(valor, max));
     }
 
-    // Calcula a velocidade do projétil baseado na potência
+    // calcula a velocidade do projétil baseado na potência
     public static double velocidadeProjetil(double potencia) {
         return (20D - (3D*potencia));
     }
 
-    // Calcula o máximo ângulo de escape baseado na velocidade
+    // calcula o máximo ângulo de escape baseado na velocidade
     public static double maximoAnguloEscape(double velocidade) {
         return Math.asin(8.0/velocidade);
     }
 
-    // Converte o ângulo traseiro para dianteiro e movimenta o robô
+    // converte o ângulo traseiro para dianteiro e movimenta o robô
     public static void tornarTrazeiraParaDianteira(AdvancedRobot robo, double anguloDesvio) {
         double angulo = Utils.normalRelativeAngle(anguloDesvio - robo.getHeadingRadians());
         if (Math.abs(angulo) > (Math.PI/2)) {
