@@ -2,27 +2,18 @@ package quartetofantastico;
 
 import robocode.*;
 import robocode.util.Utils;
-import java.awt.geom.*;     // for Point2D's
-import java.lang.*;         // for Double and Integer objects
-import java.util.ArrayList; // for collection of waves
+import java.awt.geom.*;
+import java.lang.*;
+import java.util.ArrayList;
 import java.awt.Color;
 
-/**
- * A combination of the movement from BasicSurfer and the gun from 
- * GFTargetingBot. See:
- *   http://robowiki.net?BasicSurfer
- *   http://robowiki.net?GFTargetingBot
- *
- * Change log:
- *   1.01 - solved bug in distance-bin calculation when distance > 900
- *   1.02 - fixed wave mismatching caused by rounding errors
- */
+// O Coisa - a class by (Quarteto Fantastico)
 
 public class OCoisa extends AdvancedRobot {
     public static int BINS = 47;
-    public static double _surfStats[] = new double[BINS]; // we'll use 47 bins
-    public Point2D.Double _myLocation;     // our bot's location
-    public Point2D.Double _enemyLocation;  // enemy bot's location
+    public static double[] _surfStats = new double[BINS];
+    public Point2D.Double _myLocation;
+    public Point2D.Double _enemyLocation;
 
     public ArrayList _enemyWaves;
     public ArrayList _surfDirections;
@@ -32,29 +23,17 @@ public class OCoisa extends AdvancedRobot {
 	private static double lateralDirection;
 	private static double lastEnemyVelocity;
 
-    // We must keep track of the enemy's energy level to detect EnergyDrop,
-    // indicating a bullet is fired
     public static double _oppEnergy = 100.0;
 
-    // This is a rectangle that represents an 800x600 battle field,
-    // used for a simple, iterative WallSmoothing method (by Kawigi).
-    // If you're not familiar with WallSmoothing, the wall stick indicates
-    // the amount of space we try to always have on either end of the tank
-    // (extending straight out the front or back) before touching a wall.
     public static Rectangle2D.Double _fieldRect;
-    public static double WALL_STICK = 160;
-
-    //testando impl regressao logistica
-    private double distance;
-    private double velocity;
 
     public void run() {
-        _fieldRect = new java.awt.geom.Rectangle2D.Double(18, 18, getBattleFieldWidth() - 36, getBattleFieldHeight() - 36);
-
         //setColor
         setColors(Color.orange, Color.white, Color.orange, Color.black, Color.orange);
 
-		lateralDirection = 1;
+        _fieldRect = new java.awt.geom.Rectangle2D.Double(18, 18, getBattleFieldWidth() - 36, getBattleFieldHeight() - 36);
+
+        lateralDirection = 1;
 		lastEnemyVelocity = 0;
 		
         _enemyWaves = new ArrayList();
@@ -66,7 +45,6 @@ public class OCoisa extends AdvancedRobot {
 
 
         do {
-            // basic mini-radar code
             turnRadarRightRadians(Double.POSITIVE_INFINITY);
         } while (true);
     }
@@ -90,8 +68,8 @@ public class OCoisa extends AdvancedRobot {
             ew.fireTime = getTime() - 1;
             ew.bulletVelocity = bulletVelocity(bulletPower);
             ew.distanceTraveled = bulletVelocity(bulletPower);
-            ew.direction = ((Integer)_surfDirections.get(2)).intValue();
-            ew.directAngle = ((Double)_surfAbsBearings.get(2)).doubleValue();
+            ew.direction = ((Integer)_surfDirections.get(2));
+            ew.directAngle = ((Double)_surfAbsBearings.get(2));
             ew.fireLocation = (Point2D.Double)_enemyLocation.clone(); // last tick
 
             _enemyWaves.add(ew);
@@ -99,8 +77,6 @@ public class OCoisa extends AdvancedRobot {
 
         _oppEnergy = e.getEnergy();
 
-        // update after EnemyWave detection, because that needs the previous
-        // enemy location as the source of the wave
         _enemyLocation = project(_myLocation, absBearing, e.getDistance());
 
         updateWaves();
@@ -128,21 +104,17 @@ public class OCoisa extends AdvancedRobot {
 		setTurnRadarRightRadians(Utils.normalRelativeAngle(enemyAbsoluteBearing - getRadarHeadingRadians()) * 2);
 
 
-        distance = e.getDistance();
-        velocity = getVelocity();
-        //System.out.println("Distância: " + distancia);
-        //System.out.println("Velocidade: " + velocidade);
+        //testando impl regressao logistica
+        double distance = e.getDistance();
+        double velocity = getVelocity();
 
         if (LogisticRegression.getCoefficient(distance, velocity) >= 0.5) {
             System.out.println("Distância: " + distance);
             System.out.println(LogisticRegression.getCoefficient(distance, velocity));
-            System.out.println("perdeu");
+            System.out.println("Perdeu");
 
-            // Calcular a diferença entre a direção atual do canhão e a direção do chassi
             double gunToHeading = Utils.normalRelativeAngle(getGunHeadingRadians() - getHeadingRadians());
-            // Girar o chassi para alinhar com a direção do canhão
             setTurnRightRadians(gunToHeading);
-            // Avançar 50 pixels
             setAhead(500);
         }
     }
@@ -161,13 +133,13 @@ public class OCoisa extends AdvancedRobot {
     }
 
     public EnemyWave getClosestSurfableWave() {
-        double closestDistance = 50000; // I juse use some very big number here
+        double closestDistance = 10000;
         EnemyWave surfWave = null;
 
-        for (int x = 0; x < _enemyWaves.size(); x++) {
-            EnemyWave ew = (EnemyWave)_enemyWaves.get(x);
+        for (Object enemyWave : _enemyWaves) {
+            EnemyWave ew = (EnemyWave) enemyWave;
             double distance = _myLocation.distance(ew.fireLocation)
-                - ew.distanceTraveled;
+                    - ew.distanceTraveled;
 
             if (distance > ew.bulletVelocity && distance < closestDistance) {
                 surfWave = ew;
@@ -178,8 +150,6 @@ public class OCoisa extends AdvancedRobot {
         return surfWave;
     }
 
-    // Given the EnemyWave that the bullet was on, and the point where we
-    // were hit, calculate the index into our stat array for that factor.
     public static int getFactorIndex(EnemyWave ew, Point2D.Double targetLocation) {
         double offsetAngle = (absoluteBearing(ew.fireLocation, targetLocation)
             - ew.directAngle);
@@ -187,38 +157,30 @@ public class OCoisa extends AdvancedRobot {
             / maxEscapeAngle(ew.bulletVelocity) * ew.direction;
 
         return (int)limit(0,
-            (factor * ((BINS - 1) / 2)) + ((BINS - 1) / 2),
+            (factor * ((double) (BINS - 1) / 2)) + ((double) (BINS - 1) / 2),
             BINS - 1);
     }
 
-    // Given the EnemyWave that the bullet was on, and the point where we
-    // were hit, update our stat array to reflect the danger in that area.
     public void logHit(EnemyWave ew, Point2D.Double targetLocation) {
         int index = getFactorIndex(ew, targetLocation);
 
         for (int x = 0; x < BINS; x++) {
-            // for the spot bin that we were hit on, add 1;
-            // for the bins next to it, add 1 / 2;
-            // the next one, add 1 / 5; and so on...
             _surfStats[x] += 1.0 / (Math.pow(index - x, 2) + 1);
         }
     }
 
     public void onHitByBullet(HitByBulletEvent e) {
-        // If the _enemyWaves collection is empty, we must have missed the
-        // detection of this wave somehow.
         if (!_enemyWaves.isEmpty()) {
             Point2D.Double hitBulletLocation = new Point2D.Double(
                 e.getBullet().getX(), e.getBullet().getY());
             EnemyWave hitWave = null;
 
-            // look through the EnemyWaves, and find one that could've hit us.
-            for (int x = 0; x < _enemyWaves.size(); x++) {
-                EnemyWave ew = (EnemyWave)_enemyWaves.get(x);
+            for (Object enemyWave : _enemyWaves) {
+                EnemyWave ew = (EnemyWave) enemyWave;
 
                 if (Math.abs(ew.distanceTraveled -
-                    _myLocation.distance(ew.fireLocation)) < 50
-                    && Math.abs(bulletVelocity(e.getBullet().getPower()) 
+                        _myLocation.distance(ew.fireLocation)) < 50
+                        && Math.abs(bulletVelocity(e.getBullet().getPower())
                         - ew.bulletVelocity) < 0.001) {
                     hitWave = ew;
                     break;
@@ -228,21 +190,18 @@ public class OCoisa extends AdvancedRobot {
             if (hitWave != null) {
                 logHit(hitWave, hitBulletLocation);
 
-                // We can remove this wave now, of course.
                 _enemyWaves.remove(_enemyWaves.lastIndexOf(hitWave));
             }
         }
     }
 
-    // CREDIT: mini sized predictor from Apollon, by rozu
-    // http://robowiki.net?Apollon
     public Point2D.Double predictPosition(EnemyWave surfWave, int direction) {
     	Point2D.Double predictedPosition = (Point2D.Double)_myLocation.clone();
     	double predictedVelocity = getVelocity();
     	double predictedHeading = getHeadingRadians();
     	double maxTurning, moveAngle, moveDir;
 
-        int counter = 0; // number of ticks in the future
+        int counter = 0;
         boolean intercepted = false;
 
     	do {
@@ -259,18 +218,13 @@ public class OCoisa extends AdvancedRobot {
 
     		moveAngle = Utils.normalRelativeAngle(moveAngle);
 
-    		// maxTurning is built in like this, you can't turn more then this in one tick
     		maxTurning = Math.PI/720d*(40d - 3d*Math.abs(predictedVelocity));
     		predictedHeading = Utils.normalRelativeAngle(predictedHeading
                 + limit(-maxTurning, moveAngle, maxTurning));
 
-    		// this one is nice ;). if predictedVelocity and moveDir have
-            // different signs you want to breack down
-    		// otherwise you want to accelerate (look at the factor "2")
     		predictedVelocity += (predictedVelocity * moveDir < 0 ? 2*moveDir : moveDir);
     		predictedVelocity = limit(-8, predictedVelocity, 8);
 
-    		// calculate the new predicted position
     		predictedPosition = project(predictedPosition, predictedHeading, predictedVelocity);
 
             counter++;
@@ -310,9 +264,6 @@ public class OCoisa extends AdvancedRobot {
         setBackAsFront(this, goAngle);
     }
 
-    // CREDIT: Iterative WallSmoothing by Kawigi
-    //   - return absolute angle to move at after account for WallSmoothing
-    // robowiki.net?WallSmoothing
     public double wallSmoothing(Point2D.Double botLocation, double angle, int orientation) {
         while (!_fieldRect.contains(project(botLocation, angle, 160))) {
             angle += orientation*0.05;
@@ -320,16 +271,11 @@ public class OCoisa extends AdvancedRobot {
         return angle;
     }
 
-    // CREDIT: from CassiusClay, by PEZ
-    //   - returns point length away from sourceLocation, at angle
-    // robowiki.net?CassiusClay
     public static Point2D.Double project(Point2D.Double sourceLocation, double angle, double length) {
         return new Point2D.Double(sourceLocation.x + Math.sin(angle) * length,
             sourceLocation.y + Math.cos(angle) * length);
     }
 
-    // got this from RaikoMicro, by Jamougha, but I think it's used by many authors
-    //  - returns the absolute angle (in radians) from source to target points
     public static double absoluteBearing(Point2D.Double source, Point2D.Double target) {
         return Math.atan2(target.x - source.x, target.y - source.y);
     }
