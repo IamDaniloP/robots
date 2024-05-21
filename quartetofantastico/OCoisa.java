@@ -11,34 +11,34 @@ import java.awt.Color;
 
 public class OCoisa extends AdvancedRobot {
     public static int BINS = 47;
-    public static double[] _surfStats = new double[BINS];
-    public Point2D.Double _myLocation;
-    public Point2D.Double _enemyLocation;
+    public static double[] statusSurf = new double[BINS];
+    public Point2D.Double minhaLocalizacao;
+    public Point2D.Double localizacaoOponente;
 
-    public ArrayList _enemyWaves;
-    public ArrayList _surfDirections;
-    public ArrayList _surfAbsBearings;
-	private static final double BULLET_POWER = 1.9;
+    public ArrayList ondasDoOponente;
+    public ArrayList direcaoSurf;
+    public ArrayList anguloSurf;
+	private static final double POTENCIA_PROJETIL = 1.9;
 	
-	private static double lateralDirection;
-	private static double lastEnemyVelocity;
+	private static double direcaoLateral;
+	private static double ultimaVelocidadeInimigo;
 
-    public static double _oppEnergy = 100.0;
+    public static double energiaOponente = 100.0;
 
-    public static Rectangle2D.Double battlefield;
+    public static Rectangle2D.Double dimensoesArena;
 
     public void run() {
         //setColor
         setColors(Color.orange, Color.white, Color.orange, Color.black, Color.orange);
 
-        battlefield = new java.awt.geom.Rectangle2D.Double(18, 18, getBattleFieldWidth() - 36, getBattleFieldHeight() - 36);
+        dimensoesArena = new java.awt.geom.Rectangle2D.Double(18, 18, getBattleFieldWidth() - 36, getBattleFieldHeight() - 36);
 
-        lateralDirection = 1;
-		lastEnemyVelocity = 0;
-		
-        _enemyWaves = new ArrayList();
-        _surfDirections = new ArrayList();
-        _surfAbsBearings = new ArrayList();
+        direcaoLateral = 1;
+        ultimaVelocidadeInimigo = 0;
+
+        ondasDoOponente = new ArrayList();
+        direcaoSurf = new ArrayList();
+        anguloSurf = new ArrayList();
 
         setAdjustGunForRobotTurn(true);
         setAdjustRadarForGunTurn(true);
@@ -50,265 +50,248 @@ public class OCoisa extends AdvancedRobot {
     }
 
     public void onScannedRobot(ScannedRobotEvent e) {
-        _myLocation = new Point2D.Double(getX(), getY());
+        minhaLocalizacao = new Point2D.Double(getX(), getY());
 
-        double lateralVelocity = getVelocity()*Math.sin(e.getBearingRadians());
-        double absBearing = e.getBearingRadians() + getHeadingRadians();
+        double velocidadeLateral = getVelocity()*Math.sin(e.getBearingRadians());
+        double anguloAbsoluto = e.getBearingRadians() + getHeadingRadians();
 
-        setTurnRadarRightRadians(Utils.normalRelativeAngle(absBearing - getRadarHeadingRadians()) * 2);
+        setTurnRadarRightRadians(Utils.normalRelativeAngle(anguloAbsoluto - getRadarHeadingRadians()) * 2);
 
-        _surfDirections.add(0, (lateralVelocity >= 0) ? 1 : -1);
-        _surfAbsBearings.add(0, absBearing + Math.PI);
+        direcaoSurf.add(0, (velocidadeLateral >= 0) ? 1 : -1);
+        anguloSurf.add(0, anguloAbsoluto + Math.PI);
 
 
-        double bulletPower = _oppEnergy - e.getEnergy();
-        if (bulletPower < 3.01 && bulletPower > 0.09
-            && _surfDirections.size() > 2) {
+        double potenciaProjetil = energiaOponente - e.getEnergy();
+        if (potenciaProjetil < 3.01 && potenciaProjetil > 0.09 && direcaoSurf.size() > 2) {
             OndaDoOponente ondaDoOponente = new OndaDoOponente();
             ondaDoOponente.tempoDisparo = getTime() - 1;
-            ondaDoOponente.velocidadeProjetil = bulletVelocity(bulletPower);
-            ondaDoOponente.distanciaPercorrida = bulletVelocity(bulletPower);
-            ondaDoOponente.direcao = ((Integer)_surfDirections.get(2));
-            ondaDoOponente.anguloDireto = ((Double)_surfAbsBearings.get(2));
-            ondaDoOponente.localDisparo = (Point2D.Double)_enemyLocation.clone(); // last tick
+            ondaDoOponente.velocidadeProjetil = velocidadeProjetil(potenciaProjetil);
+            ondaDoOponente.distanciaPercorrida = velocidadeProjetil(potenciaProjetil);
+            ondaDoOponente.direcao = ((Integer)direcaoSurf.get(2));
+            ondaDoOponente.anguloDireto = ((Double)anguloSurf.get(2));
+            ondaDoOponente.localDisparo = (Point2D.Double)localizacaoOponente.clone(); // last tick
 
-            _enemyWaves.add(ondaDoOponente);
+            ondasDoOponente.add(ondaDoOponente);
         }
 
-        _oppEnergy = e.getEnergy();
+        energiaOponente = e.getEnergy();
 
-        _enemyLocation = project(_myLocation, absBearing, e.getDistance());
+        localizacaoOponente = projetarMov(minhaLocalizacao, anguloAbsoluto, e.getDistance());
 
-        updateWaves();
-        doSurfing();
+        atualizarOnda();
+        realizarSurfing();
 
-		double enemyAbsoluteBearing = getHeadingRadians() + e.getBearingRadians();
-		double enemyDistance = e.getDistance();
-		double enemyVelocity = e.getVelocity();
-		if (enemyVelocity != 0) {
-			lateralDirection = UtilitariosGFT.sinal(enemyVelocity * Math.sin(e.getHeadingRadians() - enemyAbsoluteBearing));
+		double anguloAbsolutoOponente = getHeadingRadians() + e.getBearingRadians();
+		double distanciaOponente = e.getDistance();
+		double velocidadeOponente = e.getVelocity();
+		if (velocidadeOponente != 0) {
+            direcaoLateral = UtilitariosGFT.sinal(velocidadeOponente * Math.sin(e.getHeadingRadians() - anguloAbsolutoOponente));
 		}
 		OndaGFT ondaGFT = new OndaGFT(this);
         ondaGFT.localArma = new Point2D.Double(getX(), getY());
-		OndaGFT.localAlvo = UtilitariosGFT.projetarMov(ondaGFT.localArma, enemyAbsoluteBearing, enemyDistance);
-        ondaGFT.direcaoLateral = lateralDirection;
-        ondaGFT.potenciaProjetil = BULLET_POWER;
-        ondaGFT.setSubdivisoes(enemyDistance, enemyVelocity, lastEnemyVelocity);
-		lastEnemyVelocity = enemyVelocity;
-        ondaGFT.angulo = enemyAbsoluteBearing;
-		setTurnGunRightRadians(Utils.normalRelativeAngle(enemyAbsoluteBearing - getGunHeadingRadians() + ondaGFT.deslocamentoDoAnguloMaisVisitado()));
+		OndaGFT.localAlvo = UtilitariosGFT.projetarMov(ondaGFT.localArma, anguloAbsolutoOponente, distanciaOponente);
+        ondaGFT.direcaoLateral = direcaoLateral;
+        ondaGFT.potenciaProjetil = POTENCIA_PROJETIL;
+        ondaGFT.setSubdivisoes(distanciaOponente, velocidadeOponente, ultimaVelocidadeInimigo);
+        ultimaVelocidadeInimigo = velocidadeOponente;
+        ondaGFT.angulo = anguloAbsolutoOponente;
+		setTurnGunRightRadians(Utils.normalRelativeAngle(anguloAbsolutoOponente - getGunHeadingRadians() + ondaGFT.deslocamentoDoAnguloMaisVisitado()));
 		setFire(ondaGFT.potenciaProjetil);
-		if (getEnergy() >= BULLET_POWER) {
+		if (getEnergy() >= POTENCIA_PROJETIL) {
 			addCustomEvent(ondaGFT);
 		}
-		setTurnRadarRightRadians(Utils.normalRelativeAngle(enemyAbsoluteBearing - getRadarHeadingRadians()) * 2);
+		setTurnRadarRightRadians(Utils.normalRelativeAngle(anguloAbsolutoOponente - getRadarHeadingRadians()) * 2);
 
 
         //Realizando a implementação da regressão logística bináriaa
-        double distance = e.getDistance();
-        double velocity = getVelocity();
+        double minhaDistancia = e.getDistance();
+        double minhaVelocidade = getVelocity();
 
-        if (RegressaoLogisticaBinaria.getCoeficiente(distance, velocity) >= 0.5) {
-            System.out.println("Distância: " + distance);
-            System.out.println(RegressaoLogisticaBinaria.getCoeficiente(distance, velocity));
+        if (RegressaoLogisticaBinaria.getCoeficiente(minhaDistancia, minhaVelocidade) >= 0.5) {
+            System.out.println("Distância: " + minhaDistancia);
+            System.out.println(RegressaoLogisticaBinaria.getCoeficiente(minhaDistancia, minhaVelocidade));
             System.out.println("Perdeu");
 
-            double gunToHeading = Utils.normalRelativeAngle(getGunHeadingRadians() - getHeadingRadians());
-            setTurnRightRadians(gunToHeading);
-            setAhead(500);
+            double direcaoCanhao = Utils.normalRelativeAngle(getGunHeadingRadians() - getHeadingRadians());
+            setTurnRightRadians(direcaoCanhao);
+            setAhead(500); // Não tem problema o valor alto, pois assim que o oponente for encontrado ele não entra no if
         }
     }
 
-    public void updateWaves() {
-        for (int x = 0; x < _enemyWaves.size(); x++) {
-            OndaDoOponente ondaDoOponente = (OndaDoOponente)_enemyWaves.get(x);
+    public void atualizarOnda() {
+        for (int x = 0; x < ondasDoOponente.size(); x++) {
+            OndaDoOponente ondaDoOponente = (OndaDoOponente)ondasDoOponente.get(x);
 
             ondaDoOponente.distanciaPercorrida = (getTime() - ondaDoOponente.tempoDisparo) * ondaDoOponente.velocidadeProjetil;
-            if (ondaDoOponente.distanciaPercorrida >
-                _myLocation.distance(ondaDoOponente.localDisparo) + 50) {
-                _enemyWaves.remove(x);
+            if (ondaDoOponente.distanciaPercorrida > minhaLocalizacao.distance(ondaDoOponente.localDisparo) + 50) {
+                ondasDoOponente.remove(x);
                 x--;
             }
         }
     }
 
-    public OndaDoOponente getClosestSurfableWave() {
-        double closestDistance = 10000;
-        OndaDoOponente surfWave = null;
+    public OndaDoOponente getOndaProxima() {
+        double distanciaMaisProxima = 10000;
+        OndaDoOponente ondaProxima = null;
 
-        for (Object enemyWave : _enemyWaves) {
+        for (Object enemyWave : ondasDoOponente) {
             OndaDoOponente ondaDoOponente = (OndaDoOponente) enemyWave;
-            double distance = _myLocation.distance(ondaDoOponente.localDisparo)
-                    - ondaDoOponente.distanciaPercorrida;
+            double distance = minhaLocalizacao.distance(ondaDoOponente.localDisparo) - ondaDoOponente.distanciaPercorrida;
 
-            if (distance > ondaDoOponente.velocidadeProjetil && distance < closestDistance) {
-                surfWave = ondaDoOponente;
-                closestDistance = distance;
+            if (distance > ondaDoOponente.velocidadeProjetil && distance < distanciaMaisProxima) {
+                ondaProxima = ondaDoOponente;
+                distanciaMaisProxima = distance;
             }
         }
 
-        return surfWave;
+        return ondaProxima;
     }
 
-    public static int getFactorIndex(OndaDoOponente ondaDoOponente, Point2D.Double targetLocation) {
-        double offsetAngle = (absoluteBearing(ondaDoOponente.localDisparo, targetLocation)
-            - ondaDoOponente.anguloDireto);
-        double factor = Utils.normalRelativeAngle(offsetAngle)
-            / maxEscapeAngle(ondaDoOponente.velocidadeProjetil) * ondaDoOponente.direcao;
+    public static int getIndiceFator(OndaDoOponente ondaDoOponente, Point2D.Double localizacaoOponente) {
+        double anguloDesvio = (anguloAbsoluto(ondaDoOponente.localDisparo, localizacaoOponente) - ondaDoOponente.anguloDireto);
+        double fator = Utils.normalRelativeAngle(anguloDesvio) / maximoAnguloEscape(ondaDoOponente.velocidadeProjetil) * ondaDoOponente.direcao;
 
-        return (int)limit(0,
-            (factor * ((double) (BINS - 1) / 2)) + ((double) (BINS - 1) / 2),
-            BINS - 1);
+        return (int)limite(0, (fator * ((double) (BINS - 1) / 2)) + ((double) (BINS - 1) / 2), BINS - 1);
     }
 
-    public void logHit(OndaDoOponente ondaDoOponente, Point2D.Double targetLocation) {
-        int index = getFactorIndex(ondaDoOponente, targetLocation);
+    public void registraAcerto(OndaDoOponente ondaDoOponente, Point2D.Double localizacaoOponente) {
+        int index = getIndiceFator(ondaDoOponente, localizacaoOponente);
 
         for (int x = 0; x < BINS; x++) {
-            _surfStats[x] += 1.0 / (Math.pow(index - x, 2) + 1);
+            statusSurf[x] += 1.0 / (Math.pow(index - x, 2) + 1);
         }
     }
 
     public void onHitByBullet(HitByBulletEvent e) {
-        if (!_enemyWaves.isEmpty()) {
-            Point2D.Double hitBulletLocation = new Point2D.Double(
-                e.getBullet().getX(), e.getBullet().getY());
-            OndaDoOponente hitWave = null;
+        if (!ondasDoOponente.isEmpty()) {
+            Point2D.Double localizacaoMomentoAtingido = new Point2D.Double(e.getBullet().getX(), e.getBullet().getY());
+            OndaDoOponente ondaMomentoAtingido = null;
 
-            for (Object enemyWave : _enemyWaves) {
-                OndaDoOponente ondaDoOponente = (OndaDoOponente) enemyWave;
+            for (Object ondaOponente : ondasDoOponente) {
+                OndaDoOponente ondaDoOponente = (OndaDoOponente) ondaOponente;
 
-                if (Math.abs(ondaDoOponente.distanciaPercorrida -
-                        _myLocation.distance(ondaDoOponente.localDisparo)) < 50
-                        && Math.abs(bulletVelocity(e.getBullet().getPower())
-                        - ondaDoOponente.velocidadeProjetil) < 0.001) {
-                    hitWave = ondaDoOponente;
+                if (Math.abs(ondaDoOponente.distanciaPercorrida - minhaLocalizacao.distance(ondaDoOponente.localDisparo)) < 50 && Math.abs(velocidadeProjetil(e.getBullet().getPower()) - ondaDoOponente.velocidadeProjetil) < 0.001) {
+                    ondaMomentoAtingido = ondaDoOponente;
                     break;
                 }
             }
 
-            if (hitWave != null) {
-                logHit(hitWave, hitBulletLocation);
-
-                _enemyWaves.remove(_enemyWaves.lastIndexOf(hitWave));
+            if (ondaMomentoAtingido != null) {
+                registraAcerto(ondaMomentoAtingido, localizacaoMomentoAtingido);
+                ondasDoOponente.remove(ondasDoOponente.lastIndexOf(ondaMomentoAtingido));
             }
         }
     }
 
-    public Point2D.Double predictPosition(OndaDoOponente surfWave, int direction) {
-    	Point2D.Double predictedPosition = (Point2D.Double)_myLocation.clone();
-    	double predictedVelocity = getVelocity();
-    	double predictedHeading = getHeadingRadians();
-    	double maxTurning, moveAngle, moveDir;
+    public Point2D.Double posicaoPrevista(OndaDoOponente ondaDoOponente, int direcao) {
+    	Point2D.Double posicaoPrevista = (Point2D.Double)minhaLocalizacao.clone();
+    	double velocidadePrevista = getVelocity();
+    	double direcaoPrevista = getHeadingRadians();
+    	double viradaMaxima;
+        double anguloMovimento;
+        double direcaoMovimento;
 
-        int counter = 0;
-        boolean intercepted = false;
+        int contador = 0;
+        boolean interceptado = false;
 
     	do {
-    		moveAngle =
-                wallSmoothing(predictedPosition, absoluteBearing(surfWave.localDisparo,
-                predictedPosition) + (direction * (Math.PI/2)), direction)
-                - predictedHeading;
-    		moveDir = 1;
+            anguloMovimento = evitaParede(posicaoPrevista, anguloAbsoluto(ondaDoOponente.localDisparo, posicaoPrevista) + (direcao * (Math.PI/2)), direcao) - direcaoPrevista;
+            direcaoMovimento = 1;
 
-    		if(Math.cos(moveAngle) < 0) {
-    			moveAngle += Math.PI;
-    			moveDir = -1;
+    		if(Math.cos(anguloMovimento) < 0) {
+                anguloMovimento += Math.PI;
+                direcaoMovimento = -1;
     		}
 
-    		moveAngle = Utils.normalRelativeAngle(moveAngle);
+            anguloMovimento = Utils.normalRelativeAngle(anguloMovimento);
 
-    		maxTurning = Math.PI/720d*(40d - 3d*Math.abs(predictedVelocity));
-    		predictedHeading = Utils.normalRelativeAngle(predictedHeading
-                + limit(-maxTurning, moveAngle, maxTurning));
+            viradaMaxima = Math.PI/720d*(40d - 3d*Math.abs(velocidadePrevista));
+            direcaoPrevista = Utils.normalRelativeAngle(direcaoPrevista + limite(-viradaMaxima, anguloMovimento, viradaMaxima));
 
-    		predictedVelocity += (predictedVelocity * moveDir < 0 ? 2*moveDir : moveDir);
-    		predictedVelocity = limit(-8, predictedVelocity, 8);
+            velocidadePrevista += (velocidadePrevista * direcaoMovimento < 0 ? 2*direcaoMovimento : direcaoMovimento);
+            velocidadePrevista = limite(-8, velocidadePrevista, 8);
 
-    		predictedPosition = project(predictedPosition, predictedHeading, predictedVelocity);
+            posicaoPrevista = projetarMov(posicaoPrevista, direcaoPrevista, velocidadePrevista);
 
-            counter++;
+            contador++;
 
-            if (predictedPosition.distance(surfWave.localDisparo) <
-                surfWave.distanciaPercorrida + (counter * surfWave.velocidadeProjetil)
-                + surfWave.velocidadeProjetil) {
-                intercepted = true;
+            if (posicaoPrevista.distance(ondaDoOponente.localDisparo) < ondaDoOponente.distanciaPercorrida + (contador * ondaDoOponente.velocidadeProjetil) + ondaDoOponente.velocidadeProjetil) {
+                interceptado = true;
             }
-    	} while(!intercepted && counter < 500);
+    	} while(!interceptado && contador < 500);
 
-    	return predictedPosition;
+    	return posicaoPrevista;
     }
 
-    public double checkDanger(OndaDoOponente surfWave, int direction) {
-        int index = getFactorIndex(surfWave,
-            predictPosition(surfWave, direction));
+    public double checarPerigo(OndaDoOponente ondaDoOponente, int direcao) {
+        int index = getIndiceFator(ondaDoOponente,
+                posicaoPrevista(ondaDoOponente, direcao));
 
-        return _surfStats[index];
+        return statusSurf[index];
     }
 
-    public void doSurfing() {
-        OndaDoOponente surfWave = getClosestSurfableWave();
+    public void realizarSurfing() {
+        OndaDoOponente ondaDoOponente = getOndaProxima();
 
-        if (surfWave == null) { return; }
+        if (ondaDoOponente == null) { return; }
 
-        double dangerLeft = checkDanger(surfWave, -1);
-        double dangerRight = checkDanger(surfWave, 1);
+        double perigoEsquerda = checarPerigo(ondaDoOponente, -1);
+        double perigoDireita = checarPerigo(ondaDoOponente, 1);
 
-        double goAngle = absoluteBearing(surfWave.localDisparo, _myLocation);
-        if (dangerLeft < dangerRight) {
-            goAngle = wallSmoothing(_myLocation, goAngle - (Math.PI/2), -1);
+        double anguloDesvio = anguloAbsoluto(ondaDoOponente.localDisparo, minhaLocalizacao);
+        if (perigoEsquerda < perigoDireita) {
+            anguloDesvio = evitaParede(minhaLocalizacao, anguloDesvio - (Math.PI/2), -1);
         } else {
-            goAngle = wallSmoothing(_myLocation, goAngle + (Math.PI/2), 1);
+            anguloDesvio = evitaParede(minhaLocalizacao, anguloDesvio + (Math.PI/2), 1);
         }
 
-        setBackAsFront(this, goAngle);
+        tornarTrazeiraParaDianteira(this, anguloDesvio);
     }
 
-    public double wallSmoothing(Point2D.Double botLocation, double angle, int orientation) {
-        while (!battlefield.contains(project(botLocation, angle, 160))) {
-            angle += orientation*0.05;
+    public double evitaParede(Point2D.Double localizacaoRobo, double angulo, int orientacao) {
+        while (!dimensoesArena.contains(projetarMov(localizacaoRobo, angulo, 160))) {
+            angulo += orientacao*0.05;
         }
-        return angle;
+        return angulo;
     }
 
-    public static Point2D.Double project(Point2D.Double sourceLocation, double angle, double length) {
-        return new Point2D.Double(sourceLocation.x + Math.sin(angle) * length,
-            sourceLocation.y + Math.cos(angle) * length);
+    public static Point2D.Double projetarMov(Point2D.Double localOrigem, double angulo, double comprimento) {
+        return new Point2D.Double(localOrigem.x + Math.sin(angulo) * comprimento,
+                localOrigem.y + Math.cos(angulo) * comprimento);
     }
 
-    public static double absoluteBearing(Point2D.Double source, Point2D.Double target) {
+    public static double anguloAbsoluto(Point2D.Double source, Point2D.Double target) {
         return Math.atan2(target.x - source.x, target.y - source.y);
     }
 
-    public static double limit(double min, double value, double max) {
-        return Math.max(min, Math.min(value, max));
+    public static double limite(double min, double valor, double max) {
+        return Math.max(min, Math.min(valor, max));
     }
 
-    public static double bulletVelocity(double power) {
-        return (20D - (3D*power));
+    public static double velocidadeProjetil(double potencia) {
+        return (20D - (3D*potencia));
     }
 
-    public static double maxEscapeAngle(double velocity) {
-        return Math.asin(8.0/velocity);
+    public static double maximoAnguloEscape(double velocidade) {
+        return Math.asin(8.0/velocidade);
     }
 
-    public static void setBackAsFront(AdvancedRobot robot, double goAngle) {
-        double angle =
-            Utils.normalRelativeAngle(goAngle - robot.getHeadingRadians());
-        if (Math.abs(angle) > (Math.PI/2)) {
-            if (angle < 0) {
-                robot.setTurnRightRadians(Math.PI + angle);
+    public static void tornarTrazeiraParaDianteira(AdvancedRobot robo, double anguloDesvio) {
+        double angulo = Utils.normalRelativeAngle(anguloDesvio - robo.getHeadingRadians());
+        if (Math.abs(angulo) > (Math.PI/2)) {
+            if (angulo < 0) {
+                robo.setTurnRightRadians(Math.PI + angulo);
             } else {
-                robot.setTurnLeftRadians(Math.PI - angle);
+                robo.setTurnLeftRadians(Math.PI - angulo);
             }
-            robot.setBack(100);
+            robo.setBack(100);
         } else {
-            if (angle < 0) {
-                robot.setTurnLeftRadians(-1*angle);
+            if (angulo < 0) {
+                robo.setTurnLeftRadians(-1*angulo);
            } else {
-                robot.setTurnRightRadians(angle);
+                robo.setTurnRightRadians(angulo);
            }
-            robot.setAhead(100);
+            robo.setAhead(100);
         }
     }
 }
