@@ -104,13 +104,13 @@ public class OCoisa extends AdvancedRobot {
 		setTurnRadarRightRadians(Utils.normalRelativeAngle(enemyAbsoluteBearing - getRadarHeadingRadians()) * 2);
 
 
-        //testando impl regressao logistica
+        //Realizando a implementação da regressão logística bináriaa
         double distance = e.getDistance();
         double velocity = getVelocity();
 
-        if (LogisticRegression.getCoefficient(distance, velocity) >= 0.5) {
+        if (RegressaoLogisticaBinaria.getCoeficiente(distance, velocity) >= 0.5) {
             System.out.println("Distância: " + distance);
-            System.out.println(LogisticRegression.getCoefficient(distance, velocity));
+            System.out.println(RegressaoLogisticaBinaria.getCoeficiente(distance, velocity));
             System.out.println("Perdeu");
 
             double gunToHeading = Utils.normalRelativeAngle(getGunHeadingRadians() - getHeadingRadians());
